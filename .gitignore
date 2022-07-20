@@ -95,3 +95,9 @@ long.*.po
 
 # OSX specific data
 .DS_Store
+/.vs/slnx.sqlite
+/.vs/slnx.sqlite-journal
+/build/premake/premake5/contrib/mbedtls/out/build/x64-Debug/.cmake/api/v1/reply
+/libraries/source/nvtt/src/out/build/x64-Debug/.cmake/api/v1/reply
+/.vs/0ad/v16
+/.vs
