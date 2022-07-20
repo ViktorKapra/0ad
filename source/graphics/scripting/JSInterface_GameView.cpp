@@ -28,6 +28,7 @@
 #include "ps/CLogger.h"
 #include "scriptinterface/FunctionWrapper.h"
 #include "simulation2/helpers/Position.h"
+#include <maths/MathUtil.h>
 
 namespace JSI_GameView
 {
@@ -52,9 +53,9 @@ void Set##NAME##Enabled(bool Enabled) \
 	g_Game->GetView()->Set##NAME##Enabled(Enabled); \
 }
 
-IMPLEMENT_BOOLEAN_SCRIPT_SETTING(Culling);
-IMPLEMENT_BOOLEAN_SCRIPT_SETTING(LockCullCamera);
-IMPLEMENT_BOOLEAN_SCRIPT_SETTING(ConstrainCamera);
+	IMPLEMENT_BOOLEAN_SCRIPT_SETTING(Culling);
+	IMPLEMENT_BOOLEAN_SCRIPT_SETTING(LockCullCamera);
+	IMPLEMENT_BOOLEAN_SCRIPT_SETTING(ConstrainCamera);
 
 #undef IMPLEMENT_BOOLEAN_SCRIPT_SETTING
 
@@ -63,116 +64,132 @@ IMPLEMENT_BOOLEAN_SCRIPT_SETTING(ConstrainCamera);
 	ScriptFunction::Register<&Get##NAME##Enabled>(rq, "GameView_Get" #NAME "Enabled"); \
 	ScriptFunction::Register<&Set##NAME##Enabled>(rq, "GameView_Set" #NAME "Enabled");
 
-void RegisterScriptFunctions_Settings(const ScriptRequest& rq)
-{
-	REGISTER_BOOLEAN_SCRIPT_SETTING(Culling);
-	REGISTER_BOOLEAN_SCRIPT_SETTING(LockCullCamera);
-	REGISTER_BOOLEAN_SCRIPT_SETTING(ConstrainCamera);
-}
+	void RegisterScriptFunctions_Settings(const ScriptRequest& rq)
+	{
+		REGISTER_BOOLEAN_SCRIPT_SETTING(Culling);
+		REGISTER_BOOLEAN_SCRIPT_SETTING(LockCullCamera);
+		REGISTER_BOOLEAN_SCRIPT_SETTING(ConstrainCamera);
+	}
 
 #undef REGISTER_BOOLEAN_SCRIPT_SETTING
 
-JS::Value GetCameraPivot(const ScriptRequest& rq)
-{
-	CVector3D pivot(-1, -1, -1);
-	if (g_Game && g_Game->GetView())
-		pivot = g_Game->GetView()->GetCameraPivot();
+	JS::Value GetCameraPivot(const ScriptRequest& rq)
+	{
+		CVector3D pivot(-1, -1, -1);
+		if (g_Game && g_Game->GetView())
+			pivot = g_Game->GetView()->GetCameraPivot();
 
-	JS::RootedValue pivotValue(rq.cx);
-	Script::CreateObject(rq, &pivotValue, "x", pivot.X, "z", pivot.Z);
-	return pivotValue;
-}
+		JS::RootedValue pivotValue(rq.cx);
+		Script::CreateObject(rq, &pivotValue, "x", pivot.X, "z", pivot.Z);
+		return pivotValue;
+	}
 
-/**
- * Move camera to a 2D location.
- */
-void CameraMoveTo(entity_pos_t x, entity_pos_t z)
-{
-	if (!g_Game || !g_Game->GetWorld() || !g_Game->GetView() || !g_Game->GetWorld()->GetTerrain())
-		return;
 
-	CTerrain* terrain = g_Game->GetWorld()->GetTerrain();
 
-	CVector3D target;
-	target.X = x.ToFloat();
-	target.Z = z.ToFloat();
-	target.Y = terrain->GetExactGroundLevel(target.X, target.Z);
+	JS::Value GetCameraData(const ScriptRequest& rq)
+	{
+		CGameView* view = g_Game->GetView();
+		CVector3D rotation = view->GetCameraRotation();
+		CVector3D pivot(-1, -1, -1);
+		if (g_Game && g_Game->GetView())
+			pivot = g_Game->GetView()->GetCameraPosition();
+		JS::RootedValue pivotValue(rq.cx);
+		Script::CreateObject(rq, &pivotValue, "x", pivot.X, "z", pivot.Z,"y", pivot.Y, "zoom", view->GetCameraZoom(),
+			"rotx", rotation.X, "roty", rotation.Y,"fov", view->GetCamera()->GetFOV());
+		return    pivotValue;
+	}
+	/**
+	 * Move camera to a 2D location.
+	 */
+	void CameraMoveTo(entity_pos_t x, entity_pos_t z)
+	{
+		if (!g_Game || !g_Game->GetWorld() || !g_Game->GetView() || !g_Game->GetWorld()->GetTerrain())
+			return;
 
-	g_Game->GetView()->MoveCameraTarget(target);
-}
+		CTerrain* terrain = g_Game->GetWorld()->GetTerrain();
 
-/**
- * Set the camera to look at the given location.
- */
-void SetCameraTarget(float x, float y, float z)
-{
-	if (!g_Game || !g_Game->GetView())
-		return;
-	g_Game->GetView()->MoveCameraTarget(CVector3D(x, y, z));
-}
+		CVector3D target;
+		target.X = x.ToFloat();
+		target.Z = z.ToFloat();
+		target.Y = terrain->GetExactGroundLevel(target.X, target.Z);
 
-/**
- * Set the data (position, orientation and zoom) of the camera.
- */
-void SetCameraData(entity_pos_t x, entity_pos_t y, entity_pos_t z, entity_pos_t rotx, entity_pos_t roty, entity_pos_t zoom)
-{
-	if (!g_Game || !g_Game->GetView())
-		return;
+		g_Game->GetView()->MoveCameraTarget(target);
+	}
 
-	CVector3D pos(x.ToFloat(), y.ToFloat(), z.ToFloat());
 
-	g_Game->GetView()->SetCamera(pos, rotx.ToFloat(), roty.ToFloat(), zoom.ToFloat());
-}
+	/**
+	 * Set the camera to look at the given location.
+	 */
+	void SetCameraTarget(float x, float y, float z)
+	{
+		if (!g_Game || !g_Game->GetView())
+			return;
+		g_Game->GetView()->MoveCameraTarget(CVector3D(x, y, z));
+	}
 
-/**
- * Start / stop camera following mode.
- * @param entityid unit id to follow. If zero, stop following mode
- */
-void CameraFollow(entity_id_t entityid)
-{
-	if (!g_Game || !g_Game->GetView())
-		return;
+	/**
+	 * Set the data (position, orientation and zoom) of the camera.
+	 */
+	void SetCameraData(entity_pos_t x, entity_pos_t y, entity_pos_t z, entity_pos_t rotx, entity_pos_t roty, entity_pos_t zoom, float fov= DEGTORAD(45.0))
+	{
+		if (!g_Game || !g_Game->GetView())
+			return;
 
-	g_Game->GetView()->FollowEntity(entityid, false);
-}
+		CVector3D pos(x.ToFloat(), y.ToFloat(), z.ToFloat());
 
-/**
- * Start / stop first-person camera following mode.
- * @param entityid unit id to follow. If zero, stop following mode.
- */
-void CameraFollowFPS(entity_id_t entityid)
-{
-	if (!g_Game || !g_Game->GetView())
-		return;
+		g_Game->GetView()->SetCamera(pos, rotx.ToFloat(), roty.ToFloat(), zoom.ToFloat(),fov);
+	}
 
-	g_Game->GetView()->FollowEntity(entityid, true);
-}
+	/**
+	 * Start / stop camera following mode.
+	 * @param entityid unit id to follow. If zero, stop following mode
+	 */
+	void CameraFollow(entity_id_t entityid)
+	{
+		if (!g_Game || !g_Game->GetView())
+			return;
 
-entity_id_t GetFollowedEntity()
-{
-	if (!g_Game || !g_Game->GetView())
-		return INVALID_ENTITY;
+		g_Game->GetView()->FollowEntity(entityid, false);
+	}
 
-	return g_Game->GetView()->GetFollowedEntity();
-}
+	/**
+	 * Start / stop first-person camera following mode.
+	 * @param entityid unit id to follow. If zero, stop following mode.
+	 */
+	void CameraFollowFPS(entity_id_t entityid)
+	{
+		if (!g_Game || !g_Game->GetView())
+			return;
 
-CFixedVector3D GetTerrainAtScreenPoint(int x, int y)
-{
-	CVector3D pos = g_Game->GetView()->GetCamera()->GetWorldCoordinates(x, y, true);
-	return CFixedVector3D(fixed::FromFloat(pos.X), fixed::FromFloat(pos.Y), fixed::FromFloat(pos.Z));
-}
+		g_Game->GetView()->FollowEntity(entityid, true);
+	}
 
-void RegisterScriptFunctions(const ScriptRequest& rq)
-{
-	RegisterScriptFunctions_Settings(rq);
+	entity_id_t GetFollowedEntity()
+	{
+		if (!g_Game || !g_Game->GetView())
+			return INVALID_ENTITY;
 
-	ScriptFunction::Register<&GetCameraPivot>(rq, "GetCameraPivot");
-	ScriptFunction::Register<&CameraMoveTo>(rq, "CameraMoveTo");
-	ScriptFunction::Register<&SetCameraTarget>(rq, "SetCameraTarget");
-	ScriptFunction::Register<&SetCameraData>(rq, "SetCameraData");
-	ScriptFunction::Register<&CameraFollow>(rq, "CameraFollow");
-	ScriptFunction::Register<&CameraFollowFPS>(rq, "CameraFollowFPS");
-	ScriptFunction::Register<&GetFollowedEntity>(rq, "GetFollowedEntity");
-	ScriptFunction::Register<&GetTerrainAtScreenPoint>(rq, "GetTerrainAtScreenPoint");
-}
+		return g_Game->GetView()->GetFollowedEntity();
+	}
+
+	CFixedVector3D GetTerrainAtScreenPoint(int x, int y)
+	{
+		CVector3D pos = g_Game->GetView()->GetCamera()->GetWorldCoordinates(x, y, true);
+		return CFixedVector3D(fixed::FromFloat(pos.X), fixed::FromFloat(pos.Y), fixed::FromFloat(pos.Z));
+	}
+
+	void RegisterScriptFunctions(const ScriptRequest& rq)
+	{
+		RegisterScriptFunctions_Settings(rq);
+
+		ScriptFunction::Register<&GetCameraPivot>(rq, "GetCameraPivot");
+		ScriptFunction::Register<&CameraMoveTo>(rq, "CameraMoveTo");
+		ScriptFunction::Register<&SetCameraTarget>(rq, "SetCameraTarget");
+		ScriptFunction::Register<&SetCameraData>(rq, "SetCameraData");
+		ScriptFunction::Register<&CameraFollow>(rq, "CameraFollow");
+		ScriptFunction::Register<&CameraFollowFPS>(rq, "CameraFollowFPS");
+		ScriptFunction::Register<&GetFollowedEntity>(rq, "GetFollowedEntity");
+		ScriptFunction::Register<&GetTerrainAtScreenPoint>(rq, "GetTerrainAtScreenPoint");
+		ScriptFunction::Register<&GetCameraData>(rq, "GetCameraData");
+	}
 }

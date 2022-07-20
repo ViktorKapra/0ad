@@ -51,41 +51,43 @@ static const float CAMERA_EDGE_MARGIN = 2.0f * TERRAIN_TILE_SIZE;
 
 CCameraController::CCameraController(CCamera& camera)
 	: ICameraController(camera),
-	  m_ConstrainCamera(true),
-	  m_FollowEntity(INVALID_ENTITY),
-	  m_FollowFirstPerson(false),
+	m_ConstrainCamera(true),
+	m_FollowEntity(INVALID_ENTITY),
+	m_FollowFirstPerson(false),
 
-	  // Dummy values (these will be filled in by the config file)
-	  m_ViewScrollSpeed(0),
-	  m_ViewScrollSpeedModifier(1),
-	  m_ViewScrollMouseDetectDistance(3),
-	  m_ViewRotateXSpeed(0),
-	  m_ViewRotateXMin(0),
-	  m_ViewRotateXMax(0),
-	  m_ViewRotateXDefault(0),
-	  m_ViewRotateYSpeed(0),
-	  m_ViewRotateYSpeedWheel(0),
-	  m_ViewRotateYDefault(0),
-	  m_ViewRotateSpeedModifier(1),
-	  m_ViewDragSpeed(0),
-	  m_ViewZoomSpeed(0),
-	  m_ViewZoomSpeedWheel(0),
-	  m_ViewZoomMin(0),
-	  m_ViewZoomMax(0),
-	  m_ViewZoomDefault(0),
-	  m_ViewZoomSpeedModifier(1),
-	  m_ViewFOV(DEGTORAD(45.f)),
-	  m_ViewNear(2.f),
-	  m_ViewFar(4096.f),
-	  m_HeightSmoothness(0.5f),
-	  m_HeightMin(16.f),
+	// Dummy values (these will be filled in by the config file)
+	m_ViewScrollSpeed(0),
+	m_ViewScrollSpeedModifier(1),
+	m_ViewScrollMouseDetectDistance(3),
+	m_ViewRotateXSpeed(0),
+	m_ViewRotateXMin(0),
+	m_ViewRotateXMax(0),
+	m_ViewRotateXDefault(0),
+	m_ViewRotateYSpeed(0),
+	m_ViewRotateYSpeedWheel(0),
+	m_ViewRotateYDefault(0),
+	m_ViewRotateSpeedModifier(1),
+	m_ViewDragSpeed(0),
+	m_ViewZoomSpeed(0),
+	m_ViewZoomSpeedWheel(0),
+	m_ViewZoomMin(0),
+	m_ViewZoomMax(0),
+	m_ViewFOVMax(0),
+	m_ViewFOVMin(0),
+	m_ViewZoomDefault(0),
+	m_ViewZoomSpeedModifier(1),
+	m_ViewFOV(DEGTORAD(45.f)),
+	m_ViewNear(2.f),
+	m_ViewFar(4096.f),
+	m_HeightSmoothness(0.5f),
+	m_HeightMin(16.f),
 
-	  m_PosX(0, 0, 0.01f),
-	  m_PosY(0, 0, 0.01f),
-	  m_PosZ(0, 0, 0.01f),
-	  m_Zoom(0, 0, 0.1f),
-	  m_RotateX(0, 0, 0.001f),
-	  m_RotateY(0, 0, 0.001f)
+	m_PosX(0, 0, 0.01f),
+	m_PosY(0, 0, 0.01f),
+	m_PosZ(0, 0, 0.01f),
+	m_Zoom(0, 0, 0.1f),
+	m_RotateX(0, 0, 0.001f),
+	m_RotateY(0, 0, 0.001f)
 {
 	SViewPort vp;
 	vp.m_X = 0;
@@ -119,6 +121,8 @@ void CCameraController::LoadConfig()
 	CFG_GET_VAL("view.zoom.speed.wheel", m_ViewZoomSpeedWheel);
 	CFG_GET_VAL("view.zoom.min", m_ViewZoomMin);
 	CFG_GET_VAL("view.zoom.max", m_ViewZoomMax);
+	CFG_GET_VAL("view.FOV.min", m_ViewFOVMin);
+	CFG_GET_VAL("view.FOV.max", m_ViewFOVMax);
 	CFG_GET_VAL("view.zoom.default", m_ViewZoomDefault);
 	CFG_GET_VAL("view.zoom.speed.modifier", m_ViewZoomSpeedModifier);
 
@@ -145,12 +149,14 @@ void CCameraController::LoadConfig()
 	CFG_GET_VAL("view.fov", m_ViewFOV);
 
 	// Convert to radians
+	m_ViewFOVMax = DEGTORAD(m_ViewFOVMax);
+	m_ViewFOVMin = DEGTORAD(m_ViewFOVMin);
 	m_RotateX.SetValue(DEGTORAD(m_ViewRotateXDefault));
 	m_RotateY.SetValue(DEGTORAD(m_ViewRotateYDefault));
 	m_ViewFOV = DEGTORAD(m_ViewFOV);
 }
 
-void CCameraController::SetViewport(const SViewPort& vp)
+void CCameraController::SetViewport(const SViewPort & vp)
 {
 	m_Camera.SetViewPort(vp);
 	SetCameraProjection();
@@ -268,6 +274,18 @@ void CCameraController::Update(const float deltaRealTime)
 		m_Zoom.AddSmoothly(-m_ViewZoomSpeed * deltaRealTime);
 	if (HotkeyIsPressed("camera.zoom.out"))
 		m_Zoom.AddSmoothly(m_ViewZoomSpeed * deltaRealTime);
+	//FOV control
+	float fovDelta = 0;
+	if (HotkeyIsPressed("camera.fov.in"))
+	{
+		fovDelta = 0.01;
+
+	}
+	if (HotkeyIsPressed("camera.fov.out"))
+	{
+		fovDelta = -0.01;
+	}
+	m_ViewFOV = Clamp<float>(m_ViewFOV + fovDelta, m_ViewFOVMin, m_ViewFOVMax);
 
 	if (m_ConstrainCamera)
 		m_Zoom.ClampSmoothly(m_ViewZoomMin, m_ViewZoomMax);
@@ -403,7 +421,7 @@ void CCameraController::Update(const float deltaRealTime)
 	m_Camera.UpdateFrustum();
 }
 
-CVector3D CCameraController::GetSmoothPivot(CCamera& camera) const
+CVector3D CCameraController::GetSmoothPivot(CCamera & camera) const
 {
 	return camera.GetOrientation().GetTranslation() + camera.GetOrientation().GetIn() * m_Zoom.GetSmoothedValue();
 }
@@ -429,7 +447,9 @@ float CCameraController::GetCameraZoom() const
 	return m_Zoom.GetValue();
 }
 
-void CCameraController::SetCamera(const CVector3D& pos, float rotX, float rotY, float zoom)
+
+
+void CCameraController::SetCamera(const CVector3D & pos, float rotX, float rotY, float zoom, float fov)
 {
 	m_PosX.SetValue(pos.X);
 	m_PosY.SetValue(pos.Y);
@@ -437,7 +457,7 @@ void CCameraController::SetCamera(const CVector3D& pos, float rotX, float rotY, 
 	m_RotateX.SetValue(rotX);
 	m_RotateY.SetValue(rotY);
 	m_Zoom.SetValue(zoom);
-
+	m_ViewFOV = fov;
 	FocusHeight(false);
 
 	SetupCameraMatrixNonSmooth(&m_Camera.m_Orientation);
@@ -447,7 +467,7 @@ void CCameraController::SetCamera(const CVector3D& pos, float rotX, float rotY, 
 	m_FollowEntity = INVALID_ENTITY;
 }
 
-void CCameraController::MoveCameraTarget(const CVector3D& target)
+void CCameraController::MoveCameraTarget(const CVector3D & target)
 {
 	// Maintain the same orientation and level of zoom, if we can
 	// (do this by working out the point the camera is looking at, saving
@@ -469,7 +489,7 @@ void CCameraController::MoveCameraTarget(const CVector3D& target)
 	m_FollowEntity = INVALID_ENTITY;
 }
 
-void CCameraController::ResetCameraTarget(const CVector3D& target)
+void CCameraController::ResetCameraTarget(const CVector3D & target)
 {
 	CMatrix3D orientation;
 	orientation.SetIdentity();
@@ -527,7 +547,7 @@ void CCameraController::ResetCameraAngleZoom()
 	m_RotateY.SetValueSmoothly(DEGTORAD(m_ViewRotateYDefault));
 }
 
-void CCameraController::SetupCameraMatrixSmooth(CMatrix3D* orientation)
+void CCameraController::SetupCameraMatrixSmooth(CMatrix3D * orientation)
 {
 	orientation->SetIdentity();
 	orientation->RotateX(m_RotateX.GetSmoothedValue());
@@ -535,7 +555,7 @@ void CCameraController::SetupCameraMatrixSmooth(CMatrix3D* orientation)
 	orientation->Translate(m_PosX.GetSmoothedValue(), m_PosY.GetSmoothedValue(), m_PosZ.GetSmoothedValue());
 }
 
-void CCameraController::SetupCameraMatrixSmoothRot(CMatrix3D* orientation)
+void CCameraController::SetupCameraMatrixSmoothRot(CMatrix3D * orientation)
 {
 	orientation->SetIdentity();
 	orientation->RotateX(m_RotateX.GetSmoothedValue());
@@ -543,7 +563,7 @@ void CCameraController::SetupCameraMatrixSmoothRot(CMatrix3D* orientation)
 	orientation->Translate(m_PosX.GetValue(), m_PosY.GetValue(), m_PosZ.GetValue());
 }
 
-void CCameraController::SetupCameraMatrixNonSmooth(CMatrix3D* orientation)
+void CCameraController::SetupCameraMatrixNonSmooth(CMatrix3D * orientation)
 {
 	orientation->SetIdentity();
 	orientation->RotateX(m_RotateX.GetValue());
@@ -611,7 +631,7 @@ void CCameraController::FocusHeight(bool smooth)
 		m_PosY.Add(diff);
 }
 
-InReaction CCameraController::HandleEvent(const SDL_Event_* ev)
+InReaction CCameraController::HandleEvent(const SDL_Event_ * ev)
 {
 	switch (ev->ev.type)
 	{
@@ -697,3 +717,4 @@ InReaction CCameraController::HandleEvent(const SDL_Event_* ev)
 
 	return IN_PASS;
 }
+

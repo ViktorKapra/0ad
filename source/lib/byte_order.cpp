@@ -149,9 +149,12 @@ void write_be64(void* p, u64 x)
 
 u64 movzx_le64(const u8* p, size_t size_bytes)
 {
+
 	u64 number = 0;
-	for(size_t i = 0; i < std::min(size_bytes, (size_t)8u); i++)
-		number |= ((u64)p[i]) << (i*8);
+	for (size_t i = 0; i < std::min(size_bytes, (size_t)8u); i++)
+	{
+		number |= ((u64)p[i]) << (i * 8);
+	}
 
 	return number;
 }
