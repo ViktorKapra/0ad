@@ -28,6 +28,10 @@ BuildingAI.prototype.Init = function()
 	this.archersGarrisoned = 0;
 	this.arrowsLeft = 0;
 	this.targetUnits = [];
+	//let cmp = Engine.QueryInterface(this.entity, IID_AlertRaiser);
+	//var keyNames = Object.keys(this.entity);
+	//warn(this.entity.toString());
+
 };
 
 BuildingAI.prototype.OnGarrisonedUnitsChanged = function(msg)
@@ -103,10 +107,13 @@ BuildingAI.prototype.SetupRangeQuery = function()
 	var cmpAttack = Engine.QueryInterface(this.entity, IID_Attack);
 	if (!cmpAttack)
 		return;
+	
+	
 
 	var cmpRangeManager = Engine.QueryInterface(SYSTEM_ENTITY, IID_RangeManager);
 	if (this.enemyUnitsQuery)
 	{
+		
 		cmpRangeManager.DestroyActiveQuery(this.enemyUnitsQuery);
 		this.enemyUnitsQuery = undefined;
 	}
@@ -141,6 +148,8 @@ BuildingAI.prototype.SetupGaiaRangeQuery = function()
 	if (!cmpAttack)
 		return;
 
+	
+
 	var cmpRangeManager = Engine.QueryInterface(SYSTEM_ENTITY, IID_RangeManager);
 	if (this.gaiaUnitsQuery)
 	{
@@ -173,6 +182,7 @@ BuildingAI.prototype.OnRangeUpdate = function(msg)
 	var cmpAttack = Engine.QueryInterface(this.entity, IID_Attack);
 	if (!cmpAttack)
 		return;
+	
 
 	// Target enemy units except non-dangerous animals.
 	if (msg.tag == this.gaiaUnitsQuery)
@@ -199,7 +209,10 @@ BuildingAI.prototype.OnRangeUpdate = function(msg)
 	}
 
 	if (this.targetUnits.length)
+	{
+
 		this.StartTimer();
+	}
 };
 
 BuildingAI.prototype.StartTimer = function()
@@ -210,7 +223,7 @@ BuildingAI.prototype.StartTimer = function()
 	var cmpAttack = Engine.QueryInterface(this.entity, IID_Attack);
 	if (!cmpAttack)
 		return;
-
+	
 	var cmpTimer = Engine.QueryInterface(SYSTEM_ENTITY, IID_Timer);
 	var attackTimers = cmpAttack.GetTimers(attackType);
 

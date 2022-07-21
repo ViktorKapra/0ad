@@ -101,3 +101,6 @@ long.*.po
 /libraries/source/nvtt/src/out/build/x64-Debug/.cmake/api/v1/reply
 /.vs/0ad/v16
 /.vs
+/libraries/win32/wxwidgets
+/binaries/system
+/binaries/data/tools/atlas/toolbar/bump_mapping.png
