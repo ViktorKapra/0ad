@@ -668,10 +668,13 @@ void LongPathfinder::AddJumpedDiag(int i, int j, int di, int dj, PathCost g, Pat
 
 	ASSERT(di == 1 || di == -1);
 	ASSERT(dj == 1 || dj == -1);
-
+	
 	int ni = i + di;
 	int nj = j + dj;
-	bool detectGoal = OnTheWay(i, j, di, dj, state.iGoal, state.jGoal);
+	const u16 iGoal = state.iGoal;
+	const u16 jGoal = state.jGoal;
+
+	bool detectGoal = OnTheWay(i, j, di, dj, iGoal, jGoal);
 	while (true)
 	{
 		// Stop if we hit an obstructed cell
@@ -691,8 +694,10 @@ void LongPathfinder::AddJumpedDiag(int i, int j, int di, int dj, PathCost g, Pat
 			return;
 		}
 
-		int fi = HasJumpedHoriz(ni, nj, di, state, detectGoal && OnTheWay(ni, nj, di, 0, state.iGoal, state.jGoal));
-		int fj = HasJumpedVert(ni, nj, dj, state, detectGoal && OnTheWay(ni, nj, 0, dj, state.iGoal, state.jGoal));
+		const bool goalI = OnTheWay(ni, nj, di, 0, iGoal, jGoal);
+		const bool goalJ = OnTheWay(ni, nj, 0, dj, iGoal, jGoal);
+		int fi = HasJumpedHoriz(ni, nj, di, state, detectGoal && goalI );
+		int fj = HasJumpedVert(ni, nj, dj, state, detectGoal && goalJ);
 		if (fi != ni || fj != nj)
 		{
 			ProcessNeighbour(i, j, ni, nj, g, state);
@@ -710,11 +715,14 @@ void LongPathfinder::AddJumpedDiag(int i, int j, int di, int dj, PathCost g, Pat
 		ni += di;
 		nj += dj;
 	}
+
 }
 
 void LongPathfinder::ComputeJPSPath(const HierarchicalPathfinder& hierPath, entity_pos_t x0, entity_pos_t z0, const PathGoal& origGoal, pass_class_t passClass, WaypointPath& path) const
 {
+	
 	PROFILE2("ComputePathJPS");
+	TIMER_BEGIN(L"ComputeJPS"); 
 	PathfinderState state = { 0 };
 
 	if (m_UseJPSCache)
@@ -915,6 +923,7 @@ void LongPathfinder::ComputeJPSPath(const HierarchicalPathfinder& hierPath, enti
 	}
 	else
 		SAFE_DELETE(state.tiles);
+	TIMER_END(L"ComputeJPS ");
 }
 
 #undef PASSABLE

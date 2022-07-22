@@ -239,33 +239,69 @@ function formatBatchTrainingString(buildingsCountToTrainFullBatch, fullBatchSize
  */
 var g_JumpCameraPositions = [];
 var g_JumpCameraLast;
+var g_JumpCamera = [];
+var g_JumpCamera_Last;
 
-function jumpCamera(index)
-{
+//function jumpCamera(index)
+//{
+//	let position = g_JumpCameraPositions[index];
+//	if (!position)
+//		return;
+
+//	let threshold = Engine.ConfigDB_GetValue("user", "gui.session.camerajump.threshold");
+//	let cameraPivot = Engine.GetCameraPivot();
+//	if (g_JumpCameraLast  &&
+//	    Math.abs(cameraPivot.x - position.x) < threshold &&
+//	    Math.abs(cameraPivot.z - position.z) < threshold)
+//	{
+//		Engine.CameraMoveTo(g_JumpCameraLast.x, g_JumpCameraLast.z);
+		
+//	}
+//	else
+//	{
+//		g_JumpCameraLast = cameraPivot;
+//		Engine.CameraMoveTo(position.x, position.z);
+//	}
+//}
+
+//function setJumpCamera(index)
+//{
+//	g_JumpCameraPositions[index] = Engine.GetCameraPivot();
+//}
+
+function jumpCamera(index) {
 	let position = g_JumpCameraPositions[index];
 	if (!position)
 		return;
 
 	let threshold = Engine.ConfigDB_GetValue("user", "gui.session.camerajump.threshold");
-	let cameraPivot = Engine.GetCameraPivot();
-	if (g_JumpCameraLast &&
-	    Math.abs(cameraPivot.x - position.x) < threshold &&
-	    Math.abs(cameraPivot.z - position.z) < threshold)
-	{
-		Engine.CameraMoveTo(g_JumpCameraLast.x, g_JumpCameraLast.z);
+	let camera = Engine.GetCameraData();
+	if (g_JumpCameraLast && Math.abs(camera.x - position.x) < threshold &&
+		Math.abs(camera.z - position.z) < threshold) {
+		Engine.SetCameraData(g_JumpCameraLast.x, g_JumpCameraLast.y, g_JumpCameraLast.z, g_JumpCameraLast.rotx, g_JumpCameraLast.roty, g_JumpCameraLast.zoom, g_JumpCameraLast.fov);
+
+		g_JumpCameraLast = camera;
+
 	}
-	else
-	{
-		g_JumpCameraLast = cameraPivot;
-		Engine.CameraMoveTo(position.x, position.z);
+	else {
+		g_JumpCameraLast = camera;
+		Engine.SetCameraData(position.x, position.y, position.z, position.rotx, position.roty, position.zoom,position.fov);
+
 	}
+		//Engine.CameraMoveTo(position.x, position.z);
+	
 }
 
-function setJumpCamera(index)
-{
-	g_JumpCameraPositions[index] = Engine.GetCameraPivot();
+function setJumpCamera(index) {
+	g_JumpCameraPositions[index] = Engine.GetCameraData();
+	warn("Camera jump position");
+	warn(g_JumpCameraPositions[index].x.toString());
+	warn(g_JumpCameraPositions[index].y.toString());
+	warn(g_JumpCameraPositions[index].z.toString());
+	warn(g_JumpCameraPositions[index].zoom.toString());
+	warn(g_JumpCameraPositions[index].rotx.toString());
+	warn(g_JumpCameraPositions[index].roty.toString());
 }
-
 /**
  * Called by GUI when user clicks a research button.
  */
